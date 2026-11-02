@@ -6,7 +6,11 @@ const params = new URLSearchParams(location.search);
 const slug = params.get('id');
 const mode = params.get('mode') || 'admin';
 const pin = params.get('pin') || '';
-const config = window.POKER_CONFIG || {};
+const config = {
+  ...(window.POKER_CONFIG || {}),
+  supabaseUrl: import.meta.env.VITE_SUPABASE_URL || window.POKER_CONFIG?.supabaseUrl,
+  supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || window.POKER_CONFIG?.supabaseAnonKey,
+};
 let supabase, channel, state, timerHandle, lastTick = 0, isAdmin = mode !== 'board';
 let busy = false;
 
