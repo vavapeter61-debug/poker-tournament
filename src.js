@@ -309,10 +309,33 @@ async function connect() {
   timerHandle=setInterval(()=>{if(state?.running){if(remainingNow()<=0){if(isAdmin){message('레벨 종료 · 다음 레벨로 자동 전환합니다.');nextLevel();}else{state={...state,running:false,remaining:0,endsAt:null};render();}}else render();}},250);
 }
 function renderCreate(){
- $('#app').innerHTML=`<header><div><b>♠ POKER CLOCK</b><small>새 토너먼트 만들기</small></div></header>
- <main><section class="card"><h2>대회 생성</h2><label>대회 ID (영문·숫자)<input id="newSlug" placeholder="saturday-main-event"></label>
- <label>관리자 PIN (6자리 이상)<input id="newPin" type="password" inputmode="numeric" placeholder="관리자 비밀번호"></label>
- <button id="create" class="accent full">대회 생성</button><p class="hint">생성 후 관리자 주소와 전광판 주소가 발급됩니다. PIN은 안전하게 보관하세요.</p></section></main>`;
+ $('#app').innerHTML=`<header><div><b>♠ POKER CLOCK</b><small>TOURNAMENT MANAGEMENT</small></div></header>
+ <main>
+  <section class="card">
+   <h2>기존 토너먼트 관리자 접속</h2>
+   <label>대회 ID<input id="loginSlug" autocomplete="off" placeholder="예: saturday-main-event"></label>
+   <label>관리자 PIN<input id="loginPin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="관리자 PIN"></label>
+   <button id="login" class="accent full">관리자 접속</button>
+   <p class="hint">이미 생성한 토너먼트의 ID와 생성할 때 설정한 PIN을 입력하세요.</p>
+  </section>
+  <section class="card">
+   <h2>새 토너먼트 만들기</h2>
+   <label>새 대회 ID (영문·숫자)<input id="newSlug" autocomplete="off" placeholder="saturday-main-event"></label>
+   <label>관리자 PIN (6자리 이상)<input id="newPin" type="password" inputmode="numeric" placeholder="관리자 비밀번호"></label>
+   <button id="create" class="accent full">대회 생성</button>
+   <p class="hint">새 대회를 생성하면 관리자 주소와 전광판 주소가 발급됩니다. PIN은 안전하게 보관하세요.</p>
+  </section>
+ </main>`;
+ $('#login').onclick=async()=>{
+  const s=$('#loginSlug').value.trim().toLowerCase(),p=$('#loginPin').value;
+  if(!/^[a-z0-9-]{3,40}$/.test(s)||!p)return alert('대회 ID와 관리자 PIN을 입력하세요.');
+  const {data,error}=await supabase.from('poker_tournaments').select('state').eq('slug',s).single();
+  if(error||!data)return alert('대회를 찾을 수 없습니다. 대회 ID를 확인하세요.');
+  // Validate the PIN through the existing security-definer RPC before opening the admin URL.
+  const {error:authError}=await supabase.rpc('poker_update_tournament',{p_slug:s,p_pin:p,p_state:data.state});
+  if(authError)return alert('관리자 PIN이 올바르지 않습니다.');
+  location.href=`${location.pathname}?id=${encodeURIComponent(s)}&mode=admin&pin=${encodeURIComponent(p)}`;
+ };
  $('#create').onclick=async()=>{
   const s=$('#newSlug').value.trim().toLowerCase(),p=$('#newPin').value;
   if(!/^[a-z0-9-]{3,40}$/.test(s)||p.length<6)return alert('대회 ID는 영문 소문자·숫자·하이픈 3~40자, PIN은 6자 이상으로 입력하세요.');
